@@ -1,0 +1,737 @@
+[Script 1.0]
+
+--------------------------------------------------------------------------------
+-- util package
+--
+-- Overview
+-- 1. array management
+-- 2. debug help
+--
+--
+--
+-- 1. array management
+--
+--
+-- 2. debug help / WARNING: session.debug has max 4000 char before crashed
+--  2.1.  simple use case
+--    nc$xncbap.debug#create('column_name_1'[, 'column_name_2'[,...[, i_table_name => 'debug table name']]]); -- max 10 columns can defined
+--    nc$xncbap.debug#add('column_value_1'[, 'column_value_2'[,...[, i_table_name => 'debug table name']]]); -- only defined columns can be filled
+--    nc$xncbap.debug#set_title('title of debug');  -- add title for debug table
+--    nc$xncbap.debug#set_text('text under debug table'); -- add text under the debug table
+--    nc$xncbap.debug#write_log;  -- write log with session.debug
+--
+--    Output:
+--      title of debug
+--      +----------------+----------------+
+--      | column_name_1  | column_name_2  |
+--      +----------------+----------------+
+--      | column_value_1 | column_value_2 |
+--
+--      text under debug table
+--
+--
+--  2.2.  get debug text/table
+--    nc$xncbap.debug#get; -- return only complete debug table
+--
+--  2.2.  use more then one debug table
+--    nc$xncbap.debug#create('first_table_column_1', i_table_name => 'first_table'); -- create first debug table
+--    nc$xncbap.debug#add('first_table_column_1_value_1'); -- fill first table with values
+--
+--    nc$xncbap.debug#create('second_table_column_1', i_table_name => 'second_table'); -- create second debug table
+--    nc$xncbap.debug#add('second_table_column_1_value_1'); -- fill second table with values
+--
+--    nc$xncbap.debug#add('first_table_column_1_value_2', i_table_name => 'first_table'); -- fill first table with other values after initialised second table
+--    nc$xncbap.debug#add('second_table_column_1_value_2', i_table_name => 'second_table'); -- fill second table with other values after fill up of other tables
+--    nc$xncbap.debug#add('second_table_column_1_value_3'); -- fill second table with other values after fill up of second tables
+--
+--    nc$xncbap.debug#write_log; -- write log for last used debug table (second_table)
+--    nc$xncbap.debug#write_log(i_table_name => 'first_table'); -- write log for 'first_table' debug table
+--
+--------------------------------------------------------------------------------
+script package nc$xncbap
+is
+
+  g_tab_id              id mem_tab;
+  g_row_id              id mem_tab_row;
+  g_tab_list_id         id mem_tab;
+  g_tab_list_name       text  := 'nc$xncbap';
+  g_tab_list_col_id     text  := 'tab_id';
+  g_tab_list_col_name   text  := 'tab_name';
+  g_tab_list_col_title  text  := 'tab_title';
+  g_tab_list_col_text   text  := 'tab_text';
+  g_tab_list_col_0      text  := 'col0';
+  g_tab_list_col_1      text  := 'col1';
+  g_tab_list_col_2      text  := 'col2';
+  g_tab_list_col_3      text  := 'col3';
+  g_tab_list_col_4      text  := 'col4';
+  g_tab_list_col_5      text  := 'col5';
+  g_tab_list_col_6      text  := 'col6';
+  g_tab_list_col_7      text  := 'col7';
+  g_tab_list_col_8      text  := 'col8';
+  g_tab_list_col_9      text  := 'col9';
+
+
+  --------------------------------------------------------------------------------
+  -- Delete tables
+  --------------------------------------------------------------------------------
+  procedure array#clear
+  is
+  begin
+    if (g_tab_id is not null) then
+      with mem_tab(g_tab_id) as tab do
+        tab.remv;
+      end with;
+    end if;
+
+    g_tab_id := null;
+    g_row_id := null;
+  end array#clear;
+
+
+  --------------------------------------------------------------------------------
+  -- delete table list/index with table data
+  --------------------------------------------------------------------------------
+  procedure array#remove_list
+  is
+  begin
+    if (g_tab_list_id is not null) then
+      with mem_tab(g_tab_list_id) as tab do
+        for row in tab.row_list loop
+          g_tab_id := row.fld(g_tab_list_col_id).number_val;
+          array#clear;
+        end loop;
+
+        tab.remv;
+      end with;
+
+      g_tab_id := null;
+      g_row_id := null;
+      g_tab_list_id := null;
+    end if;
+  end array#remove_list;
+
+
+  --------------------------------------------------------------------------------
+  -- initialize table list/index
+  --------------------------------------------------------------------------------
+  procedure array#init_list
+  is
+  begin
+    if (g_tab_list_id is null) then
+      with new mem_tab(g_tab_list_name, '+') as tab do
+        tab.cols.add_base(g_tab_list_col_id,    mem_tab.type_number);
+        tab.cols.add_base(g_tab_list_col_name,  mem_tab.type_text);
+        tab.cols.add_base(g_tab_list_col_title, mem_tab.type_text);
+        tab.cols.add_base(g_tab_list_col_text,  mem_tab.type_text);
+        tab.cols.add_base(g_tab_list_col_0,     mem_tab.type_text);
+        tab.cols.add_base(g_tab_list_col_1,     mem_tab.type_text);
+        tab.cols.add_base(g_tab_list_col_2,     mem_tab.type_text);
+        tab.cols.add_base(g_tab_list_col_3,     mem_tab.type_text);
+        tab.cols.add_base(g_tab_list_col_4,     mem_tab.type_text);
+        tab.cols.add_base(g_tab_list_col_5,     mem_tab.type_text);
+        tab.cols.add_base(g_tab_list_col_6,     mem_tab.type_text);
+        tab.cols.add_base(g_tab_list_col_7,     mem_tab.type_text);
+        tab.cols.add_base(g_tab_list_col_8,     mem_tab.type_text);
+        tab.cols.add_base(g_tab_list_col_9,     mem_tab.type_text);
+
+        g_tab_list_id := tab;
+      end with;
+    end if;
+  end array#init_list;
+
+
+  --------------------------------------------------------------------------------
+  -- reset table list/index and table data
+  --------------------------------------------------------------------------------
+  procedure array#reset_list
+  is
+  begin
+    array#remove_list;
+    array#init_list;
+  end array#reset_list;
+
+
+  --------------------------------------------------------------------------------
+  -- check if table exist
+  --
+  -- @param text  i_table_name  table name
+  --
+  -- @return null - no table exist | 0...n - id of table
+  --------------------------------------------------------------------------------
+  function array#exist(
+    i_table_name  text
+  ) return number
+  is
+    l_return  number;
+  begin
+    with mem_tab(g_tab_list_id) as tab do
+      for row in tab.row_list loop
+        if (row.fld(g_tab_list_col_name).text_val = i_table_name) then
+          l_return := row.fld(g_tab_list_col_id).number_val;
+        end if;
+      end loop;
+    end with;
+
+    return l_return;
+  end array#exist;
+
+
+  --------------------------------------------------------------------------------
+  -- update table id for table name
+  --
+  -- @param number  i_table_id    new id of table
+  -- @param text    i_table_name  name of table
+  --------------------------------------------------------------------------------
+  procedure array#update(
+    i_table_id    number,
+    i_table_name  text
+  )
+  is
+  begin
+    with mem_tab(g_tab_list_name) as tab do
+      for row in tab.row_list loop
+        if (row.fld(g_tab_list_col_name).text_val = i_table_name) then
+          row.fld(g_tab_list_col_id).number_val := i_table_id;
+        end if;
+      end loop;
+    end with;
+  end array#update;
+
+
+  --------------------------------------------------------------------------------
+  -- add table to list
+  --
+  -- @param number  i_table_id    id of table
+  -- @param text    i_table_name  name of table
+  --------------------------------------------------------------------------------
+  procedure array#add(
+    i_table_id    number,
+    i_table_name  text
+  )
+  is
+  begin
+    if (array#exist(i_table_name) is null) then
+      with mem_tab(g_tab_list_id) as tab do
+        with new tab.row_list as row do
+          row.fld(g_tab_list_col_id).number_val := i_table_id;
+          row.fld(g_tab_list_col_name).text_val := i_table_name;
+        end with;
+      end with;
+    else
+      array#update(i_table_id, i_table_name);
+    end if;
+  end array#add;
+
+
+  --------------------------------------------------------------------------------
+  -- initialize new table or load existing one
+  --
+  -- @param text    i_table_name  name of table
+  -- @param boolean i_force_new   true - exist table overwrite it | false (default) - use existing table
+  --------------------------------------------------------------------------------
+  procedure array#init(
+    i_table_name  text    := null,
+    i_force_new   boolean := false
+  )
+  is
+    l_table_name  text  := 'default';
+  begin
+      array#init_list;
+
+    if (i_table_name is not null) then
+      l_table_name := i_table_name;
+    end if;
+
+    l_table_name := g_tab_list_name || '.' || l_table_name;
+    g_tab_id := array#exist(l_table_name);
+
+    if (i_force_new = true) then
+      array#clear;
+    end if;
+
+    if (g_tab_id is null) then
+      with new mem_tab(l_table_name, '+') as tab do
+        g_tab_id := tab;
+      end with;
+
+      array#add(g_tab_id, l_table_name);
+    end if;
+  end array#init;
+
+
+  --------------------------------------------------------------------------------
+  -- load existing table if not exist create a new table
+  --
+  -- @param text    i_table_name  name of table
+  --------------------------------------------------------------------------------
+  procedure array#load(
+    i_table_name  text
+  )
+  is
+  begin
+    g_tab_id := array#exist(i_table_name);
+
+    if (g_tab_id is null) then
+      array#init(i_table_name);
+    end if;
+
+    g_row_id := null;
+  end array#load;
+
+
+  --------------------------------------------------------------------------------
+  -- set a title for table
+  --
+  -- @param text    i_table_title  title of table
+  --------------------------------------------------------------------------------
+  procedure array#set_title(
+    i_table_title   text
+  )
+  is
+  begin
+    if (g_tab_id is not null) then
+      with mem_tab(g_tab_list_id) as tab do
+        for row in tab.row_list loop
+          if (row.fld(g_tab_list_col_id).number_val = g_tab_id) then
+            row.fld(g_tab_list_col_title).text_val := i_table_title;
+          end if;
+        end loop;
+      end with;
+    end if;
+  end array#set_title;
+
+
+  --------------------------------------------------------------------------------
+  -- get the title for table
+  --
+  -- @return  text  title of array
+  --------------------------------------------------------------------------------
+  function array#get_title return text
+  is
+    l_return  text  := '';
+  begin
+    if (g_tab_id is not null) then
+      with mem_tab(g_tab_list_id) as tab do
+        for row in tab.row_list loop
+          if (row.fld(g_tab_list_col_id).number_val = g_tab_id) then
+            l_return := row.fld(g_tab_list_col_title).text_val;
+          end if;
+        end loop;
+      end with;
+    end if;
+
+    return l_return;
+  end array#get_title;
+
+
+  --------------------------------------------------------------------------------
+  -- set a text for table
+  --
+  -- @param text    i_table_text  text of table
+  --------------------------------------------------------------------------------
+  procedure array#set_text(
+    i_table_text  text
+  )
+  is
+  begin
+    if (g_tab_id is not null) then
+      with mem_tab(g_tab_list_id) as tab do
+        for row in tab.row_list loop
+          if (row.fld(g_tab_list_col_id).number_val = g_tab_id) then
+            row.fld(g_tab_list_col_text).text_val := i_table_text;
+          end if;
+        end loop;
+      end with;
+    end if;
+  end array#set_text;
+
+
+  --------------------------------------------------------------------------------
+  -- get the text for table
+  --
+  -- @return  text  text of array
+  --------------------------------------------------------------------------------
+  function array#get_text return text
+  is
+    l_return  text  := '';
+  begin
+    if (g_tab_id is not null) then
+      with mem_tab(g_tab_list_id) as tab do
+        for row in tab.row_list loop
+          if (row.fld(g_tab_list_col_id).number_val = g_tab_id) then
+            l_return := row.fld(g_tab_list_col_text).text_val;
+          end if;
+        end loop;
+      end with;
+    end if;
+
+    return l_return;
+  end array#get_text;
+
+
+  --------------------------------------------------------------------------------
+  -- set length of table column
+  --
+  -- @param text    i_col_name    table name
+  -- @param text    i_col_length  length of table column
+  --------------------------------------------------------------------------------
+  procedure array#set_col_length(
+    i_col_name    text,
+    i_col_length  text
+  )
+  is
+  begin
+    if (g_tab_id is not null) then
+      with mem_tab(g_tab_list_id) as tab do
+        for row in tab.row_list loop
+          if (row.fld(g_tab_list_col_id).number_val = g_tab_id) and ((row.fld(i_col_name).text_val is null) or (row.fld(i_col_name).text_val < i_col_length)) then
+            row.fld(i_col_name).text_val := i_col_length;
+          end if;
+        end loop;
+      end with;
+    end if;
+  end array#set_col_length;
+
+
+  --------------------------------------------------------------------------------
+  -- get length of table column
+  --
+  -- @param text    i_table_text  text of table
+  --------------------------------------------------------------------------------
+  function array#get_col_length(
+    i_col_name    text
+  ) return text
+  is
+    l_return text := '';
+  begin
+    if (g_tab_id is not null) then
+      with mem_tab(g_tab_list_id) as tab do
+        for row in tab.row_list loop
+          if (row.fld(g_tab_list_col_id).number_val = g_tab_id) then
+            l_return := row.fld(i_col_name).text_val;
+          end if;
+        end loop;
+      end with;
+    end if;
+
+    return l_return;
+  end array#get_col_length;
+
+
+  --------------------------------------------------------------------------------
+  -- add column to table
+  --
+  -- @param text    i_col_name  name of column
+  --------------------------------------------------------------------------------
+  procedure array#add_col(
+    i_col_name  text
+  )
+  is
+  begin
+    if (g_tab_id is not null) then
+      with mem_tab(g_tab_id) as tab do
+        tab.cols.add_base(i_col_name, mem_tab.type_text);
+      end with;
+    end if;
+  end array#add_col;
+
+
+  --------------------------------------------------------------------------------
+  -- add row in table and set the pointer to this id
+  --------------------------------------------------------------------------------
+  procedure array#add_row
+  is
+  begin
+    if (g_tab_id is not null) then
+      with mem_tab(g_tab_id) as tab do
+        with new tab.row_list as row do
+          g_row_id := row.id;
+        end with;
+      end with;
+    end if;
+  end array#add_row;
+
+
+  --------------------------------------------------------------------------------
+  -- add value to active row in the next free/clear column
+  --
+  -- @param text    i_col_value  value of column
+  --------------------------------------------------------------------------------
+  procedure array#add_value(
+    i_col_value  text
+  )
+  is
+  begin
+    if (g_tab_id is not null) then
+      with mem_tab(g_tab_id) as tab do
+        for row in tab.row_list loop
+          if (row.id = g_row_id) then
+            for column in row.fld_list loop
+              if (column.text_val is null) then
+                column.text_val := i_col_value;
+
+                array#set_col_length(column.col.name, length(i_col_value));
+
+                exit;
+              end if;
+            end loop;
+          end if;
+        end loop;
+      end with;
+    end if;
+  end array#add_value;
+
+
+  --------------------------------------------------------------------------------
+  -- get table id table
+  --
+  -- @param text    i_table_name  table name
+  --------------------------------------------------------------------------------
+  function array#get_id(
+    i_table_name  text := null
+  )
+  return number
+  is
+  begin
+    if (i_table_name is not null) then
+      return array#exist(i_table_name);
+    else
+      return g_tab_id;
+    end if;
+  end array#get_id;
+
+
+  --------------------------------------------------------------------------------
+  -- print table in debug statement
+  --------------------------------------------------------------------------------
+  procedure array#print
+  is
+  begin
+    if (g_tab_id is not null) then
+      with mem_tab(g_tab_id) as tab do
+        for row in tab.row_list loop
+          for column in row.fld_list loop
+            session.debug('row.id: ' || row.id || ' / col: ' || column.col.name || ' / text_val: ' || column.text_val);
+          end loop;
+        end loop;
+      end with;
+    end if;
+  end array#print;
+
+
+  ------------------------------------------------------------------------------
+  -- set title of columns
+  --
+  -- @param  text   i_column    title column 1
+  -- @param  text   i_column_1  title column 2
+  -- @param  text   i_column_2  title column 3
+  -- ...
+  -- @param  text   i_table_name  table name
+  ------------------------------------------------------------------------------
+  procedure debug#create(
+    i_column      text,
+    i_column_1    text := '',
+    i_column_2    text := '',
+    i_column_3    text := '',
+    i_column_4    text := '',
+    i_column_5    text := '',
+    i_column_6    text := '',
+    i_column_7    text := '',
+    i_column_8    text := '',
+    i_column_9    text := '',
+    i_table_name  text := 'nc$xncbap_debug_table'
+  ) is
+  begin
+    array#init(i_table_name, true);
+
+    array#set_col_length(g_tab_list_col_0, length(i_column));
+    array#add_col(g_tab_list_col_0);
+    array#add_row;
+    array#add_value(i_column);
+
+    if (i_column_1 is not null) then array#set_col_length(g_tab_list_col_1, length(i_column_1)); array#add_col(g_tab_list_col_1); array#add_value(i_column_1); end if;
+    if (i_column_2 is not null) then array#set_col_length(g_tab_list_col_2, length(i_column_2)); array#add_col(g_tab_list_col_2); array#add_value(i_column_2); end if;
+    if (i_column_3 is not null) then array#set_col_length(g_tab_list_col_3, length(i_column_3)); array#add_col(g_tab_list_col_3); array#add_value(i_column_3); end if;
+    if (i_column_4 is not null) then array#set_col_length(g_tab_list_col_4, length(i_column_4)); array#add_col(g_tab_list_col_4); array#add_value(i_column_4); end if;
+    if (i_column_5 is not null) then array#set_col_length(g_tab_list_col_5, length(i_column_5)); array#add_col(g_tab_list_col_5); array#add_value(i_column_5); end if;
+    if (i_column_6 is not null) then array#set_col_length(g_tab_list_col_6, length(i_column_6)); array#add_col(g_tab_list_col_6); array#add_value(i_column_6); end if;
+    if (i_column_7 is not null) then array#set_col_length(g_tab_list_col_7, length(i_column_7)); array#add_col(g_tab_list_col_7); array#add_value(i_column_7); end if;
+    if (i_column_8 is not null) then array#set_col_length(g_tab_list_col_8, length(i_column_8)); array#add_col(g_tab_list_col_8); array#add_value(i_column_8); end if;
+    if (i_column_9 is not null) then array#set_col_length(g_tab_list_col_9, length(i_column_9)); array#add_col(g_tab_list_col_9); array#add_value(i_column_9); end if;
+  end debug#create;
+
+
+  ------------------------------------------------------------------------------
+  -- add row content
+  --
+  -- @param  text   i_column    value column 1
+  -- @param  text   i_column_1  value column 2
+  -- @param  text   i_column_2  value column 3
+  -- ...
+  -- @param  text   i_table_name  table name
+  ------------------------------------------------------------------------------
+  procedure debug#add(
+    i_column      text,
+    i_column_1    text := '',
+    i_column_2    text := '',
+    i_column_3    text := '',
+    i_column_4    text := '',
+    i_column_5    text := '',
+    i_column_6    text := '',
+    i_column_7    text := '',
+    i_column_8    text := '',
+    i_column_9    text := '',
+    i_table_name  text := ''
+  ) is
+  begin
+    if (i_table_name is not null) then
+      array#load(i_table_name);
+    end if;
+
+    array#set_col_length(g_tab_list_col_0, length(i_column));
+    array#add_row;
+    array#add_value(i_column);
+
+    if (i_column_1 is not null) then array#set_col_length(g_tab_list_col_1, length(i_column_1)); array#add_value(i_column_1); end if;
+    if (i_column_1 is not null) then array#set_col_length(g_tab_list_col_2, length(i_column_2)); array#add_value(i_column_2); end if;
+    if (i_column_1 is not null) then array#set_col_length(g_tab_list_col_3, length(i_column_3)); array#add_value(i_column_3); end if;
+    if (i_column_1 is not null) then array#set_col_length(g_tab_list_col_4, length(i_column_4)); array#add_value(i_column_4); end if;
+    if (i_column_1 is not null) then array#set_col_length(g_tab_list_col_5, length(i_column_5)); array#add_value(i_column_5); end if;
+    if (i_column_1 is not null) then array#set_col_length(g_tab_list_col_6, length(i_column_6)); array#add_value(i_column_6); end if;
+    if (i_column_1 is not null) then array#set_col_length(g_tab_list_col_7, length(i_column_7)); array#add_value(i_column_7); end if;
+    if (i_column_1 is not null) then array#set_col_length(g_tab_list_col_8, length(i_column_8)); array#add_value(i_column_8); end if;
+    if (i_column_1 is not null) then array#set_col_length(g_tab_list_col_9, length(i_column_9)); array#add_value(i_column_9); end if;
+  end debug#add;
+
+
+  ------------------------------------------------------------------------------
+  -- generate table line
+  --
+  -- @return  text  clear table line
+  ------------------------------------------------------------------------------
+  function debug#gen_clear_line
+    return text
+  is
+    l_return  text  := '+';
+  begin
+    if (g_tab_id is not null) then
+      with mem_tab(g_tab_id) as tab do
+        for col in tab.col_list loop
+          l_return := l_return || RPAD('-', (array#get_col_length(col.name) + 2), '-') || '+';
+        end loop;
+      end with;
+    end if;
+
+    return l_return || chr(10);
+  end debug#gen_clear_line;
+
+
+  ------------------------------------------------------------------------------
+  -- generate formatted debug table
+  --
+  -- @return  text   formatted debug table
+  ------------------------------------------------------------------------------
+  function debug#get_print return text
+  is
+    l_return  text  := '';
+  begin
+
+    if (g_tab_id is not null) then
+      with mem_tab(g_tab_id) as tab do
+        for row in tab.row_list loop
+          if (row.id <= 2) then
+            l_return := l_return || debug#gen_clear_line;
+          end if;
+
+          if (row.fld_list.count > 0) then
+            l_return := l_return || '|';
+
+            for column in row.fld_list loop
+              l_return := l_return || RPAD(column.text_val, (column.col.name + 2), ' ') || '|';
+            end loop;
+
+            l_return := l_return || chr(10);
+          end if;
+        end loop;
+      end with;
+    end if;
+
+    return '';
+  end debug#get_print;
+
+
+  ------------------------------------------------------------------------------
+  -- gets the debug text
+  --
+  -- @param  text   i_table_name  table name
+  --
+  -- @return  text   debug statement
+  ------------------------------------------------------------------------------
+  function debug#get(
+    i_table_name  text := ''
+  )
+    return text
+  is
+  begin
+    if (i_table_name is not null) then
+      array#load(i_table_name);
+    end if;
+
+    return array#get_title || chr(10) || debug#get_print || chr(10) || array#get_text;
+  end debug#get;
+
+
+  ------------------------------------------------------------------------------
+  -- write with session.debug the log
+  --
+  -- @param   text      i_table_name    table name
+  -- @param   boolean   i_reset_table   true (default) - reset the table | false - no reset of table
+  ------------------------------------------------------------------------------
+  procedure debug#write_log(
+    i_table_name    text    := '',
+    i_reset_table   boolean := true
+  )
+  is
+  begin
+    if (i_table_name is not null) then
+      array#load(i_table_name);
+    end if;
+
+    session.debug(debug#get);
+
+    if (i_reset_table = true) then
+      array#clear;
+    end if;
+  end debug#write_log;
+
+
+  ------------------------------------------------------------------------------
+  -- link to array#set_title
+  --
+  -- @param   text   i_title   Text for title
+  ------------------------------------------------------------------------------
+  procedure debug#set_title(
+    i_title   text
+  )
+  is
+  begin
+    array#set_title(i_title);
+  end debug#set_title;
+
+
+  ------------------------------------------------------------------------------
+  -- link to array#set_text
+  --
+  -- @param   text   i_text   Text under table
+  ------------------------------------------------------------------------------
+  procedure debug#set_text(
+    i_text   text
+  )
+  is
+  begin
+    array#set_text(i_text);
+  end debug#set_text;
+
+
+
+end nc$xncbap;
